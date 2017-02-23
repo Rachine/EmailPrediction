@@ -17,31 +17,19 @@ import pandas as pd
 from collections import Counter
 
 path_to_data = 'data/'
+path_to_results= 'results/'
 
 ##########################
 # load some of the files #
 ##########################
 
-training = pd.read_csv(path_to_data + 'training_set.csv', sep=',', header=0)
-
 training_info = pd.read_csv(path_to_data + 'training_info.csv', sep=',', header=0)
-
-test = pd.read_csv(path_to_data + 'test_set.csv', sep=',', header=0)
+test_info = pd.read_csv(path_to_data + 'test_info.csv', sep=',', header=0)
 
 ################################
 # create some handy structures #
 ################################
 
-# convert training set to dictionary
-emails_ids_per_sender = {}
-for index, series in training.iterrows():
-    row = series.tolist()
-    sender = row[0]
-    ids = row[1:][0].split(' ')
-    emails_ids_per_sender[sender] = ids
-
-# save all unique sender names
-all_senders = emails_ids_per_sender.keys()
 
 i = 0
 
@@ -62,7 +50,7 @@ class LabeledLineSentence(object):
 
 sentences = LabeledLineSentence(emails_content)
 
-model = Doc2Vec(alpha=0.025, min_alpha=0.025, size=50, window=5, min_count=5,
+model = Doc2Vec(alpha=0.025, min_alpha=0.025, size=100, window=5, min_count=5,
                 dm=1, workers=8, sample=1e-5)
 
 model.build_vocab(sentences)
@@ -78,3 +66,8 @@ for epoch in range(10):
     
 model.init_sims(replace=True)
 model.save_word2vec_format('results/text.model.bin', binary=True)
+training_info['representation'] = training_info['body'].map(lambda x: model.infer_vector(x))
+test_info['representation'] = test_info['body'].map(lambda x: model.infer_vector(x))
+
+training_info.to_csv(path_to_results + 'training_info_embeddings.csv', sep=',', header=0)
+test_info.to_csv(path_to_results + 'test_info_embeddings.csv', sep=',', header=0)
