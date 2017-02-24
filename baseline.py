@@ -3,7 +3,7 @@ import operator
 import pandas as pd
 from collections import Counter
 
-path_to_data = 'data/'
+path_to_data = '/Users/paulinenicolas/Documents/M2_Data_Science/Advanced_text_and_Graphs/Project/data/'
 
 ##########################
 # load some of the files #
@@ -34,7 +34,7 @@ all_senders = emails_ids_per_sender.keys()
 address_books = {}
 i = 0
 
-for sender, ids in emails_ids_per_sender.iteritems():
+for sender, ids in emails_ids_per_sender.items():
     recs_temp = []
     for my_id in ids:
         recipients = training_info[training_info['mid']==int(my_id)]['recipients'].tolist()
@@ -52,7 +52,7 @@ for sender, ids in emails_ids_per_sender.iteritems():
     address_books[sender] = sorted_rec_occ
 
     if i % 10 == 0:
-        print i
+        print (i)
     i += 1
 
 # save all unique recipient names
@@ -95,19 +95,21 @@ for index, row in test.iterrows():
 # write predictions in proper format for Kaggle #
 #################################################
 
-path_to_results = 'results/'
+path_to_results = '/Users/paulinenicolas/Documents/M2_Data_Science/Advanced_text_and_Graphs/Project/data/'
 
-with open(path_to_results + 'predictions_random.txt', 'wb') as my_file:
+with open(path_to_results + 'predictions_random.txt', 'w') as my_file:
+    
     my_file.write('mid,recipients' + '\n')
-    for sender, preds in predictions_per_sender.iteritems():
+    for sender, preds in predictions_per_sender.items():
         ids = preds[0]
         random_preds = preds[1]
         for index, my_preds in enumerate(random_preds):
             my_file.write(str(ids[index]) + ',' + ' '.join(my_preds) + '\n')
 
-with open(path_to_results + 'predictions_frequency.txt', 'wb') as my_file:
+with open(path_to_results + 'predictions_frequency.txt', 'w') as my_file:
+    
     my_file.write('mid,recipients' + '\n')
-    for sender, preds in predictions_per_sender.iteritems():
+    for sender, preds in predictions_per_sender.items():
         ids = preds[0]
         freq_preds = preds[2]
         for index, my_preds in enumerate(freq_preds):

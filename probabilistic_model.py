@@ -8,17 +8,17 @@ Created on Thu Feb 16 14:29:19 2017
 
 import numpy as np
 import pandas as pd
-from collections import Counter
+import os
 
-pathname_train_info = '/Users/paulinenicolas/Documents/M2_Data_Science/Advanced_text_and_Graphs/Project/data/training_info.csv'
-pathname_train_set = '/Users/paulinenicolas/Documents/M2_Data_Science/Advanced_text_and_Graphs/Project/data/training_set.csv'
+init_path = os.getcwd()
+pathname_train_info = init_path + '/data/training_info.csv'
+pathname_train_set = init_path + '/data/training_set.csv'
 
 
-print('Merging the 2 datasets..')
+print('Merging the initial 2 datasets..')
 #Reading the two datasets and transform them into pandas df
 df_info = pd.read_csv(pathname_train_info , sep = ',')
 df_set = pd.read_csv(pathname_train_set , sep = ',')
-
 
 #Seperating the different mail id/recipients id
 sender_info = pd.concat([pd.Series(row['sender'], row['mids'].split(' '))              
@@ -34,7 +34,14 @@ recipient_info['mid'] = recipient_info['mid'].astype(str)
 merge_info  = sender_info.merge(recipient_info, how='inner', left_on='mid', right_on='mid')
 send_recip_nb_mail = merge_info.groupby(['sender', 'recipient'], as_index=False).count()
 
+
+
+
 print('New pandas Dataset created called send_recip_nb_mail')
+print('----------------------------------------------------')
+print('  ')
+
+
 
 
 #Calculation of P(R) # emails received by recipient R/ total # emails sent at that point in time
@@ -47,11 +54,15 @@ def Prob_r(send_recip_nb_mail, df_info):
 
 Prob_R = Prob_r(send_recip_nb_mail, df_info)
 
-print('Prob_R, dataframe containing probability of each recipient')
-print(Prob_R.head())
 
-##Second method using pageRank
-#TODO
+
+print('Prob_R, dataframe containing probability of each recipient')
+print('----------------------------------------------------------')
+print(Prob_R.head())
+print('----------------------------------------------------------')
+print('  ')
+
+
 
 
 #Got it in a dictionnary form
@@ -70,11 +81,12 @@ def Prob_s_sachant_r_freq(send_recip_nb_mail, prob_R):
 Prob_S_sachant_R_freq = Prob_s_sachant_r_freq(send_recip_nb_mail, Prob_R)
 
 print('Prob_S_sachant_R_freq, dataframe containing probability of each sender given recipient')
+print('--------------------------------------------------------------------------------------')
 print(Prob_S_sachant_R_freq.head())
+print('-------------------------------------------------------------')
+print(' ')
 
 
-#Second Method using occurence
-#TODO
 
 # Calculation of P(E|R,S)
 
@@ -94,7 +106,7 @@ stopwords = ['me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'you
                  'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more',
                  'than', 'too', 'very', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
                  'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'z',
-                 'can', 'will', 'just', 'don', 'should', 'now']
+                 'can', 'will', 'just', 'don', 'should', 'now', ' ']
 
 # For each document in the dataset, do the preprocessing
 
@@ -107,31 +119,41 @@ for text in df_info['body'].tolist():
     doc = ''.join(w for w in text.lower() if w not in punctuation)
     # Stopword removal
     doc = [w for w in doc.split() if w not in stopwords]
+    doc = [w for w in doc if not (any(c.isdigit() for c in w))]
      # Stemming
     stemmer=PorterStemmer()
     doc2= [stemmer.stem(w) for w in doc]
     # Covenrt list of words to one string
     doc2 = ' '.join(doc2)
     i+=1
-    print(i)
+    if i%1000==0:
+        print(i)
     data.append(doc2)   # list data contains the preprocessed documents
-    
+
+
+print('Stop Word removed..')
+
+  
 df1 = pd.DataFrame({'word split': data})
 df_word = pd.concat([df_info, df1,], axis=1, join='inner')
 del df_word['body']
 
+
 #Granularity one recipient by line
+print('Splitting recipients : one row per recipient per email')  
 s = df_word['recipients'].str.split(' ').apply(pd.Series, 1).stack()
 s.index = s.index.droplevel(-1)
 s.name = 'recipient'
 del df_word['recipients']
 df_word2 = df_word.join(s)
 #Granularity one word by line
+print('Splitting words : one row per word per recipient')  
 t = df_word['word split'].str.split(' ').apply(pd.Series, 1).stack()
 t.index = t.index.droplevel(-1)
 t.name = 'word'
 del df_word2['word split']
 df_word3 = df_word2.join(t)
+
 
 
 #Probability of each word given sender and recipient
@@ -163,7 +185,7 @@ del prob_w_sachant_R['date_x']
 del prob_w_sachant_R['date_y']
 del prob_w_sachant_R['mid']
 del prob_w_sachant_R['tot_word_recip']
-del prob_w_sachant_R['word_sender_recip']
+del prob_w_sachant_R['word_sender_recip'] 
 
 
 #Probability of each word given sender and recipient
@@ -176,14 +198,13 @@ del prob_w['word_oc']
 del prob_w['date']
 
 
-
+ 
 prob = prob_w.merge(prob_w_sachant_R, how='inner', left_on=['word'], right_on=['word'])
 prob = prob.merge(prob_w_sachant_S_R, how='inner', left_on=['word', 'recipient'], right_on=['word', 'recipient'])
-prob['log_prob_word_sachant_S_R'] = np.log(1*prob['prob_w_sachant_S_R']+ 0.*prob['prob_w_sachant_R']+ 0.*prob['prob_w'])
+prob['log_prob_word_sachant_S_R'] = np.log(0.6*prob['prob_w_sachant_S_R']+ 0.2*prob['prob_w_sachant_R']+ 0.2*prob['prob_w'])
 
 del Prob_R['mid']
-
-
+print('Training Phase Done : call dataset "prob" to get prob for each word given recipient & sender ') 
 
 
 
