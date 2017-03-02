@@ -3,12 +3,15 @@
 """
 Created on Thu Feb 16 14:29:19 2017
 
-@author: paulinenicolas
+@authors : Pauline Nicolas Leo Treguer Riad Rachid
 """
 
 import numpy as np
 import pandas as pd
 import os
+import nltk
+from nltk.stem.porter import *
+import string
 
 init_path = os.getcwd()
 pathname_train_info = init_path + '/data/training_info.csv'
@@ -89,10 +92,6 @@ print(' ')
 
 
 # Calculation of P(E|R,S)
-
-import nltk
-from nltk.stem.porter import *
-import string
 
 stopwords = ['me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours',
                  'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers',
