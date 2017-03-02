@@ -6,7 +6,6 @@ Created on Thu Mar  2 14:31:55 2017
 @authors : Pauline Nicolas Leo Treguer Riad Rachid
 """
 
-
 import numpy as np
 import pandas as pd
 import os
@@ -14,11 +13,16 @@ import nltk
 from nltk.stem.porter import *
 import string
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from time import time
 
 
 init_path = os.getcwd()
 pathname_train_info = init_path + '/data/training_info.csv'
 pathname_train_set = init_path + '/data/training_set.csv'
+
+test_set = pd.read_csv(init_path + '/data/test_set.csv', sep=',', header=0)
+test_info = pd.read_csv(init_path +'/data/test_info.csv',  sep=',', header=0)
 
 
 print('Merging the initial 2 datasets..')
@@ -31,6 +35,8 @@ sender_info = pd.concat([pd.Series(row['sender'], row['mids'].split(' '))
                     for _, row in df_set.iterrows()]).reset_index()
 recipient_info = pd.concat([pd.Series(row['mid'], row['recipients'].split(' '))              
                     for _, row in df_info.iterrows()]).reset_index()
+
+
 #renaming columns
 sender_info.columns = ['mid', 'sender']
 recipient_info.columns = ['recipient', 'mid']
@@ -85,16 +91,70 @@ for text in df_info['body'].tolist():
         print(i)
     data.append(doc2)   # list data contains the preprocessed documents
 
+data_test = []
+i=0
+for text in test_info['body'].tolist():   
+    # Remove punctuation 
+    punctuation = set(string.punctuation)
+    doc = ''.join(w for w in text.lower() if w not in punctuation)
+    # Stopword removal
+    doc = [w for w in doc.split() if w not in stopwords]
+    doc = [w for w in doc if not (any(c.isdigit() for c in w))]
+     # Stemming
+    stemmer=PorterStemmer()
+    doc2= [stemmer.stem(w) for w in doc]
+    # Covenrt list of words to one string
+    doc2 = ' '.join(doc2)
+    i+=1
+    print(i)
+    data_test.append(doc2)   # list data contains the preprocessed documents
+print('Stop Word removed for training..')
+print('----------------------------------------------------')
+print('  ')    
+df1_test = pd.DataFrame({'word split': data_test})
+df_word_test = pd.concat([test_info, df1_test], axis=1, join='inner')
+del df_word_test['body']
+print('Stop Word removed for test data..')
+print('----------------------------------------------------')
+print('  ')
 
-print('Stop Word removed..')
 
+print('Extracting Features from the training data ...')
 df1 = pd.DataFrame({'word split': data})
 df_word = pd.concat([df_info, df1,], axis=1, join='inner')
 del df_word['body']
-
 corpus = df_word['word split'].tolist()
+
+t0 = time()
 vectorizer = TfidfVectorizer(min_df=1)
+X_train = vectorizer.fit_transform(corpus)
+duration = time() - t0
+print("done in %fs" % (duration))
+print()
 
-vectorizer.fit_transform(corpus)
 
+print("Extracting features from the test data using the same vectorizer")
+df1_test = pd.DataFrame({'word split': data_test})
+df_word_test = pd.concat([test_info, df1_test], axis=1, join='inner')
+del df_word_test['body']
+corpus = df_word_test['word split'].tolist()
+t0 = time()
+X_test = vectorizer.transform(corpus)
+duration = time() - t0
+print("done in %fs" % (duration))
+print()
 
+print("Compute closest for every email in the dataset test")
+t0 = time()
+
+df_word_test['close_mids'] = [[]]*df_word_test.shape[0]
+
+for idx in range(df_word_test.shape[0]):
+    x = X_test[idx]
+    similarities = cosine_similarity(x,X_train)[0]
+    top_sim_idx = similarities.argsort()[-30:][::-1]
+    df_word_test['close_mids'][idx] = df_word['mid'][top_sim_idx].tolist()
+    
+duration = time() - t0
+print("done in %fs" % (duration))
+print()
