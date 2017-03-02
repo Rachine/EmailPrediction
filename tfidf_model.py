@@ -13,7 +13,7 @@ import nltk
 from nltk.stem.porter import *
 import string
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import linear_kernel
 from time import time
 
 
@@ -148,13 +148,25 @@ print("Compute closest for every email in the dataset test")
 t0 = time()
 
 df_word_test['close_mids'] = [[]]*df_word_test.shape[0]
+df_word_test['close_mids_similarities'] = [[]]*df_word_test.shape[0]
+
 
 for idx in range(df_word_test.shape[0]):
+    if idx%50 == 0:
+        print(idx)
     x = X_test[idx]
-    similarities = cosine_similarity(x,X_train)[0]
+    similarities = linear_kernel(x,X_train)[0]
     top_sim_idx = similarities.argsort()[-30:][::-1]
     df_word_test['close_mids'][idx] = df_word['mid'][top_sim_idx].tolist()
+    df_word_test['close_mids_similarities'][idx] = similarities[top_sim_idx]
     
 duration = time() - t0
 print("done in %fs" % (duration))
 print()
+merge_info['scores'] = 0
+for idx in range(df_word_test.shape[0]):
+    
+    merge_info['scores'] = 0
+    
+    
+    
