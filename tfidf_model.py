@@ -165,7 +165,11 @@ duration = time() - t0
 print("done in %fs" % (duration))
 print()
 df_word_test['recipients'] = 0
+
+t0 = time()
 for idx in range(df_word_test.shape[0]):
+    if idx%2 == 0:
+        print(idx)
     close_mids = df_word_test['close_mids'][idx]
     close_similarities = df_word_test['close_mids_similarities'][idx]
     receivers = {}
@@ -179,6 +183,11 @@ for idx in range(df_word_test.shape[0]):
                 receivers[key_rec] = close_similarities[jdx]
     d = OrderedDict(sorted(receivers.items(), key=itemgetter(1)))
     df_word_test['recipients'][idx] = ' '.join(d.keys()[:10])
+
+
+duration = time() - t0
+print("done in %fs" % (duration))
+print()
 
 df_word_test_final = df_word_test[['mid','recipients']]
 
