@@ -15,7 +15,8 @@ import string
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 from time import time
-
+from collections import OrderedDict
+from operator import itemgetter
 
 init_path = os.getcwd()
 pathname_train_info = init_path + '/data/training_info.csv'
@@ -150,23 +151,35 @@ t0 = time()
 df_word_test['close_mids'] = [[]]*df_word_test.shape[0]
 df_word_test['close_mids_similarities'] = [[]]*df_word_test.shape[0]
 
-
+number_keep = 30
 for idx in range(df_word_test.shape[0]):
     if idx%50 == 0:
         print(idx)
     x = X_test[idx]
     similarities = linear_kernel(x,X_train)[0]
-    top_sim_idx = similarities.argsort()[-30:][::-1]
+    top_sim_idx = similarities.argsort()[-number_keep:][::-1]
     df_word_test['close_mids'][idx] = df_word['mid'][top_sim_idx].tolist()
     df_word_test['close_mids_similarities'][idx] = similarities[top_sim_idx]
     
 duration = time() - t0
 print("done in %fs" % (duration))
 print()
-merge_info['scores'] = 0
+df_word_test['recipients'] = 0
 for idx in range(df_word_test.shape[0]):
-    
-    merge_info['scores'] = 0
-    
-    
-    
+    close_mids = df_word_test['close_mids'][idx]
+    close_similarities = df_word_test['close_mids_similarities'][idx]
+    receivers = {}
+    for jdx,el in enumerate(close_mids):
+        new_recs = merge_info.loc[merge_info['mid'] == str(el)]['recipient']
+        new_recs = new_recs.tolist()
+        for key_rec in new_recs:
+            try:
+                receivers[key_rec] += close_similarities[jdx]
+            except:
+                receivers[key_rec] = close_similarities[jdx]
+    d = OrderedDict(sorted(receivers.items(), key=itemgetter(1)))
+    df_word_test['recipients'][idx] = ' '.join(d.keys()[:10])
+
+df_word_test_final = df_word_test[['mid','recipients']]
+
+df_word_test_final.to_csv(path_to_results+'/tf_idf_result.csv', sep=',')
