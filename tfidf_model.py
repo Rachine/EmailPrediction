@@ -24,7 +24,7 @@ pathname_train_set = init_path + '/data/training_set.csv'
 
 test_set = pd.read_csv(init_path + '/data/test_set.csv', sep=',', header=0)
 test_info = pd.read_csv(init_path +'/data/test_info.csv',  sep=',', header=0)
-
+path_to_results = init_path + '/results'
 
 print('Merging the initial 2 datasets..')
 #Reading the two datasets and transform them into pandas df
@@ -182,7 +182,7 @@ for idx in range(df_word_test.shape[0]):
             except:
                 receivers[key_rec] = close_similarities[jdx]
     d = OrderedDict(sorted(receivers.items(), key=itemgetter(1)))
-    df_word_test['recipients'][idx] = ' '.join(d.keys()[:10])
+    df_word_test['recipients'][idx] = ' '.join(d.keys()[::-1][:10])
 
 
 duration = time() - t0
@@ -191,4 +191,5 @@ print()
 
 df_word_test_final = df_word_test[['mid','recipients']]
 
-df_word_test_final.to_csv(path_to_results+'/tf_idf_result.csv', sep=',')
+df_word_test_final.to_csv(path_to_results+'/tf_idf_result.csv', sep=',',index=False)
+
