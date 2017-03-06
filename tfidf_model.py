@@ -13,7 +13,7 @@ import nltk
 from nltk.stem.porter import *
 import string
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import linear_kernel
+from sklearn.metrics.pairwise import linear_kernel, rbf_kernel
 from time import time
 from collections import OrderedDict
 from operator import itemgetter
@@ -156,7 +156,7 @@ for idx in range(df_word_test.shape[0]):
     if idx%50 == 0:
         print(idx)
     x = X_test[idx]
-    similarities = linear_kernel(x,X_train)[0]
+    similarities = rbf_kernel(x,X_train)[0]
     top_sim_idx = similarities.argsort()[-number_keep:][::-1]
     df_word_test['close_mids'][idx] = df_word['mid'][top_sim_idx].tolist()
     df_word_test['close_mids_similarities'][idx] = similarities[top_sim_idx]
