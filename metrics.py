@@ -43,12 +43,12 @@ def precision(y1, y2):
         score = score / min(nb_true_recipients, len(y2))
 
 
-    return(score)
+
+    return(score,v)
 
 
 #mail_predicted=['david.marks@enron.com', 'richard.shapiro@enron.com', 'harumi.oyamada@enron.com', 'steve.kos@enron.com', 'piazzet@wharton.upenn.edu', 'jolly.jose@enron.com', 'gregg.lenart@enron.com', 'martha.benner@enron.com', 'brenda.whitehead@enron.com', 'frieda.schutza@enron.com']
 #mail_true=['richard.shapiro@enron.com', 'mark.whitt@enron.com', 'steven.j.kean@enron.com', 'shelley.corman@enron.com', 'rick.buy@enron.com', 'jarnold@enron.com', 'kimberly.watson@enron.com', 'jshankm@enron.com', 'e..haedicke@enron.com', 'jsteffe@enron.com']
-
 #print(precision(mail_predicted,mail_true))
 
 
