@@ -10,10 +10,6 @@ import time
 
 # y1 is our prediction, y2 is true vector
 
-y1=['david.marks@enron.com', 'roger.yang@enron.com', 'harumi.oyamada@enron.com', 'steve.kos@enron.com', 'piazzet@wharton.upenn.edu', 'jolly.jose@enron.com', 'gregg.lenart@enron.com', 'martha.benner@enron.com', 'brenda.whitehead@enron.com', 'frieda.schutza@enron.com']
-y2=['richard.shapiro@enron.com', 'mark.whitt@enron.com', 'steven.j.kean@enron.com', 'shelley.corman@enron.com', 'rick.buy@enron.com', 'jarnold@enron.com', 'kimberly.watson@enron.com', 'jshankm@enron.com', 'e..haedicke@enron.com', 'jsteffe@enron.com']
-
-
 def precision(y1, y2):
     v = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     nb_true_recipients = 0
@@ -46,15 +42,13 @@ def precision(y1, y2):
 
         score = score / min(nb_true_recipients, len(y2))
 
-        print("Vector : ", v)
-        print("Score : ", score)
 
-#mail_predicted=["A","B","C","D","E","F","G","H","I","J"]
-#mail_true=["A","B","alpha","zongo","delta",0,0,0,0,0]
+    return(score)
 
 
-mail_predicted=['david.marks@enron.com', 'richard.shapiro@enron.com', 'harumi.oyamada@enron.com', 'steve.kos@enron.com', 'piazzet@wharton.upenn.edu', 'jolly.jose@enron.com', 'gregg.lenart@enron.com', 'martha.benner@enron.com', 'brenda.whitehead@enron.com', 'frieda.schutza@enron.com']
-mail_true=['richard.shapiro@enron.com', 'mark.whitt@enron.com', 'steven.j.kean@enron.com', 'shelley.corman@enron.com', 'rick.buy@enron.com', 'jarnold@enron.com', 'kimberly.watson@enron.com', 'jshankm@enron.com', 'e..haedicke@enron.com', 'jsteffe@enron.com']
+#mail_predicted=['david.marks@enron.com', 'richard.shapiro@enron.com', 'harumi.oyamada@enron.com', 'steve.kos@enron.com', 'piazzet@wharton.upenn.edu', 'jolly.jose@enron.com', 'gregg.lenart@enron.com', 'martha.benner@enron.com', 'brenda.whitehead@enron.com', 'frieda.schutza@enron.com']
+#mail_true=['richard.shapiro@enron.com', 'mark.whitt@enron.com', 'steven.j.kean@enron.com', 'shelley.corman@enron.com', 'rick.buy@enron.com', 'jarnold@enron.com', 'kimberly.watson@enron.com', 'jshankm@enron.com', 'e..haedicke@enron.com', 'jsteffe@enron.com']
 
-precision(mail_predicted,mail_true)
+#print(precision(mail_predicted,mail_true))
+
 
