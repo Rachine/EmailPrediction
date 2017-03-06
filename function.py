@@ -86,20 +86,11 @@ def closest_mail_test(df_test, df_train, X_train, X_test, number_keep, mid_send_
         x = X_test[idx]
         similarities = linear_kernel(x,X_train)[0]
         top_sim_idx = similarities.argsort()[-number_keep:][::-1]
-        df_test['close_mids'][idx] = df_train['mid'][top_sim_idx].tolist()
-        df_test['close_mids_similarities'][idx] = similarities[top_sim_idx]
+        #df_test['close_mids'][idx] = df_train['mid'][top_sim_idx].tolist()
+        #df_test['close_mids_similarities'][idx] = similarities[top_sim_idx]
         
-    duration = time() - t0
-    print("done in %fs" % (duration))
-    print()
-    df_test['recipients'] = 0
-    
-    t0 = time()
-    for idx in range(df_test.shape[0]):
-        if idx%10 == 0:
-            print(idx)
-        close_mids = df_test['close_mids'][idx]
-        close_similarities = df_test['close_mids_similarities'][idx]
+        close_mids = df_train['mid'][top_sim_idx].tolist()
+        close_similarities = similarities[top_sim_idx]
         receivers = {}
         for jdx,el in enumerate(close_mids):
             new_recs = mid_send_recip.loc[mid_send_recip['mid'] == str(el)]['recipient']
@@ -111,11 +102,13 @@ def closest_mail_test(df_test, df_train, X_train, X_test, number_keep, mid_send_
                     receivers[key_rec] = close_similarities[jdx]
         d = OrderedDict(sorted(receivers.items(), key=itemgetter(1)))
         df_test['recipients'][idx] = ' '.join(list(d.keys())[::-1][:10])
-    
-    
+
+        
     duration = time() - t0
     print("done in %fs" % (duration))
     print()
+    df_test['recipients'] = 0
+    
     return df_test
 
 
