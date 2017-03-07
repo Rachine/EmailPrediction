@@ -17,6 +17,8 @@ from time import time
 from collections import OrderedDict
 from operator import itemgetter
 import pdb
+from gensim.models import Doc2Vec
+from gensim.models.doc2vec import LabeledSentence
 
 
 def removing_stop_words(df_with_body) :
@@ -62,8 +64,10 @@ def removing_stop_words(df_with_body) :
 
 
 def tfidf(df_split_word_train, df_split_word_test):
+    pdb.set_trace()
     corpus_train = df_split_word_train['word split'].tolist() 
     corpus_test = df_split_word_test['word split'].tolist() 
+    
     t0 = time()
     vectorizer = TfidfVectorizer(min_df=1)
     X_train = vectorizer.fit_transform(corpus_train)
@@ -73,14 +77,43 @@ def tfidf(df_split_word_train, df_split_word_test):
     print()
     return X_train, X_test
 
+class LabeledLineSentence(object):
+    def __init__(self, df):
+        self.df = df[['mid','word split']]
+    def __iter__(self):
+        for el in self.df.values:
+            yield LabeledSentence(words=el[1].split(), tags=['TXT_%s' % el[0]])
 
+def embedding(df_split_word_train, df_split_word_test):
+    t0 = time()
+    sentences = LabeledLineSentence(df_split_word_train)
+    
+    model = Doc2Vec(alpha=0.025, min_alpha=0.025, size=100, window=5, min_count=5,
+                dm=1, workers=8, sample=1e-5)
+    model.build_vocab(sentences)
+    for epoch in range(10):
+        try:
+            print 'epoch %d' % (epoch)
+            model.train(sentences)
+            model.alpha *= 0.99
+            model.min_alpha = model.alpha
+        except (KeyboardInterrupt, SystemExit):
+            break
+    duration = time() - t0
+    print("done in %fs" % (duration))
+    print()
+    X_train = df_split_word_train['word split'].map(lambda x: model.infer_vector(x))
+    X_test = df_split_word_test['word split'].map(lambda x: model.infer_vector(x))
+    X_train = np.matrix(X_train.values.tolist())
+    X_test = np.matrix(X_test.values.tolist())
+    return X_train, X_test
 
-def closest_mail_test(df_test, df_train, X_train, X_test, number_keep, mid_send_recip):
+def closest_mail(df_test, df_train, X_train, X_test, number_keep,df_info):
     t0 = time()
     
     df_test['close_mids'] = [[]]*df_test.shape[0]
     df_test['close_mids_similarities'] = [[]]*df_test.shape[0]
-    
+    df_test['recipients'] = 0
     for idx in range(df_test.shape[0]):
         if idx%50 == 0:
             print(idx)
@@ -89,12 +122,11 @@ def closest_mail_test(df_test, df_train, X_train, X_test, number_keep, mid_send_
         top_sim_idx = similarities.argsort()[-number_keep:][::-1]
         #df_test['close_mids'][idx] = df_train['mid'][top_sim_idx].tolist()
         #df_test['close_mids_similarities'][idx] = similarities[top_sim_idx]
-        
         close_mids = df_train['mid'][top_sim_idx].tolist()
         close_similarities = similarities[top_sim_idx]
         receivers = {}
         for jdx,el in enumerate(close_mids):
-            new_recs = df_info.loc[df_info['mid'] == el]['recipient']
+            new_recs = df_info.loc[df_info['mid'] == el]['recipients']
             new_recs = new_recs.tolist()[0]
             for key_rec in new_recs:
                 try:
@@ -103,13 +135,9 @@ def closest_mail_test(df_test, df_train, X_train, X_test, number_keep, mid_send_
                     receivers[key_rec] = close_similarities[jdx]
         d = OrderedDict(sorted(receivers.items(), key=itemgetter(1)))
         df_test['recipients'][idx] = ' '.join(list(d.keys())[::-1][:10])
-
-        
     duration = time() - t0
     print("done in %fs" % (duration))
     print()
-    df_test['recipients'] = 0
-    
     return df_test
 
 
