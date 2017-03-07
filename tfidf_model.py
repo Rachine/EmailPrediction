@@ -6,18 +6,9 @@ Created on Thu Mar  2 14:31:55 2017
 @authors : Pauline Nicolas Leo Treguer Riad Rachid
 """
 
-import numpy as np
 import pandas as pd
 import os
-import nltk
-from nltk.stem.porter import *
-import string
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import linear_kernel, rbf_kernel
-from time import time
-from collections import OrderedDict
-from operator import itemgetter
-from function import removing_stop_words, tfidf, closest_mail
+from function import *
 
 init_path = os.getcwd()
 path_to_results = init_path + '/results'
