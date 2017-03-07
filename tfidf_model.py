@@ -52,5 +52,5 @@ model.fit(data_split_word_train, mid_send_recip_train)
 prediction_test = model.predict(test_set, data_split_word_test, 10)
 
 df_result = pd.DataFrame(prediction_test, columns=['recipients'])
-result_final = pd.concat([test_info['mid'],prediction_test], axis=1)
-result_final.to_csv(path_to_results+'/tf_idf_result.csv', sep=',',index=False)
+result_final = pd.concat([test_info['mid'],df_result], axis=1)
+result_final.to_csv('tf_idf_result.csv', sep=',',index=False)
