@@ -91,7 +91,7 @@ def embedding(df_split_word_train, df_split_word_test):
     model = Doc2Vec(alpha=0.025, min_alpha=0.025, size=100, window=5, min_count=5,
                 dm=1, workers=8, sample=1e-5)
     model.build_vocab(sentences)
-    for epoch in range(10):
+    for epoch in range(50):
         try:
             print 'epoch %d' % (epoch)
             model.train(sentences)
@@ -127,13 +127,14 @@ def closest_mail(df_test, df_train, X_train, X_test, number_keep,df_info):
         receivers = {}
         for jdx,el in enumerate(close_mids):
             new_recs = df_info.loc[df_info['mid'] == el]['recipients']
-            new_recs = new_recs.tolist()[0]
+            new_recs = new_recs.tolist()
             for key_rec in new_recs:
                 try:
                     receivers[key_rec] += close_similarities[jdx]
                 except:
                     receivers[key_rec] = close_similarities[jdx]
         d = OrderedDict(sorted(receivers.items(), key=itemgetter(1)))
+        
         df_test['recipients'][idx] = ' '.join(list(d.keys())[::-1][:10])
     duration = time() - t0
     print("done in %fs" % (duration))
