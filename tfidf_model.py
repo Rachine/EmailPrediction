@@ -56,16 +56,10 @@ print('Stop Word removed for training..')
 data_split_word_test = removing_stop_words(test_info)
 print('Stop Word removed for testing..')
 
+model = tfidf_centroid()
+model.fit(data_split_word_train, mid_send_recip_train)
+prediction_test = model.predict(test_set, data_split_word_test, 10)
 
-print(" X_train : Extracting features from the train data using tf-idf")
-print("X_test : Extracting features from the test data using the same vectorizer")
-X_train, X_test = tfidf(data_split_word_train, data_split_word_test)
-
-
-
-print("Compute closest for every email in the dataset test")
-final_df_test = closest_mail(data_split_word_test, data_split_word_train, X_train, X_test, 30)
-df_word_test_final = df_test[['mid','recipients']]
-
-df_word_test_final.to_csv(path_to_results+'/tf_idf_result.csv', sep=',',index=False)
-
+df_result = pd.DataFrame(prediction_test, columns=['recipients'])
+result_final = pd.concat([test_info['mid'],prediction_test], axis=1)
+result_final.to_csv(path_to_results+'/tf_idf_result.csv', sep=',',index=False)
