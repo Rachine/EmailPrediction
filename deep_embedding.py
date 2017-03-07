@@ -61,7 +61,7 @@ print('Stop Word removed for testing..')
 
 print(" X_train : Extracting features from the train data using Doc2VEC")
 print("X_test : Extracting features from the test data using the Doc2VEC model")
-X_train, X_test = embedding(data_split_word_train, data_split_word_test)
+X_train, X_test, model = embedding(data_split_word_train, data_split_word_test)
 
 
 

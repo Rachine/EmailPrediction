@@ -82,7 +82,7 @@ class LabeledLineSentence(object):
         self.df = df[['mid','word split']]
     def __iter__(self):
         for el in self.df.values:
-            yield LabeledSentence(words=el[1].split(), tags=['TXT_%s' % el[0]])
+            yield LabeledSentence(words=el[1].split(), tags=el[0])
 
 def embedding(df_split_word_train, df_split_word_test):
     t0 = time()
@@ -91,7 +91,7 @@ def embedding(df_split_word_train, df_split_word_test):
     model = Doc2Vec(alpha=0.025, min_alpha=0.025, size=100, window=5, min_count=5,
                 dm=1, workers=8, sample=1e-5)
     model.build_vocab(sentences)
-    for epoch in range(50):
+    for epoch in range(1):
         try:
             print 'epoch %d' % (epoch)
             model.train(sentences)
@@ -106,7 +106,8 @@ def embedding(df_split_word_train, df_split_word_test):
     X_test = df_split_word_test['word split'].map(lambda x: model.infer_vector(x))
     X_train = np.matrix(X_train.values.tolist())
     X_test = np.matrix(X_test.values.tolist())
-    return X_train, X_test
+    similars = model.docvecs.most_similar(positive=[model.infer_vector(doc_words)])
+    return X_train, X_test, model
 
 def closest_mail(df_test, df_train, X_train, X_test, number_keep,df_info):
     t0 = time()
@@ -129,6 +130,8 @@ def closest_mail(df_test, df_train, X_train, X_test, number_keep,df_info):
             new_recs = df_info.loc[df_info['mid'] == el]['recipients']
             new_recs = new_recs.tolist()
             for key_rec in new_recs:
+                if key_rec == 'no.address@enron.com':
+                    pdb.set_trace()
                 try:
                     receivers[key_rec] += close_similarities[jdx]
                 except:
