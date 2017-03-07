@@ -16,6 +16,7 @@ from sklearn.metrics.pairwise import linear_kernel, rbf_kernel
 from time import time
 from collections import OrderedDict
 from operator import itemgetter
+import pdb
 
 
 def removing_stop_words(df_with_body) :
@@ -93,8 +94,8 @@ def closest_mail_test(df_test, df_train, X_train, X_test, number_keep, mid_send_
         close_similarities = similarities[top_sim_idx]
         receivers = {}
         for jdx,el in enumerate(close_mids):
-            new_recs = mid_send_recip.loc[mid_send_recip['mid'] == str(el)]['recipient']
-            new_recs = new_recs.tolist()
+            new_recs = df_info.loc[df_info['mid'] == el]['recipient']
+            new_recs = new_recs.tolist()[0]
             for key_rec in new_recs:
                 try:
                     receivers[key_rec] += close_similarities[jdx]
@@ -112,6 +113,46 @@ def closest_mail_test(df_test, df_train, X_train, X_test, number_keep, mid_send_
     return df_test
 
 
+
+class tfidf_centroid():
+    
+    def __init__(self):
+        self.vectorizer = TfidfVectorizer(min_df=1)
+
+    def fit(self, df_split_word_train, address_book_train):
+        
+        corpus_train = df_split_word_train['word split'].tolist() 
+        t0 = time()
+        self.X_train = self.vectorizer.fit_transform(corpus_train)
+        
+        self.dict_centroid={}
+        
+        for index, row in address_book_train.iterrows():
+            
+            if index%1000==0:
+                print (index)
+            
+            if row[0] in self.dict_centroid.keys():
+                list_idx = df_split_word_train[df_split_word_train['mid'].isin([int(i) for i in row[2]])].index.tolist()
+                
+                if row[1] in self.dict_centroid[row[0]].keys():
+                    self.dict_centroid[row[0]][row[1]]= self.X_train[list_idx].sum(axis=0)
+            else:
+                self.dict_centroid[row[0]] = {}
+                list_idx = df_split_word_train[df_split_word_train['mid'].isin([int(i) for i in row[2]])].index.tolist()
+                self.dict_centroid[row[0]][row[1]]= self.X_train[list_idx].sum(axis=0)
+                    
+        duration = time() - t0
+        print("done in %fs" % (duration))
+        print()
+
+    def predict(self, df_split_word_test, X_test, number_keep):
+        corpus_test = df_split_word_test['word split'].tolist() 
+        X_test = vectorizer.transform(corpus_test)
+        
+        
+        
+        
 
 
  

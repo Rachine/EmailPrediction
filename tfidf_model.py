@@ -24,32 +24,36 @@ path_to_results = init_path + '/results'
 
 print('Loading the 4 intial datasets (train and test)..')
 #Reading the two datasets and transform them into pandas df
-df_info = pd.read_csv(init_path + '/data/training_info.csv' , sep = ',')
-df_set = pd.read_csv(init_path + '/data/training_set.csv' , sep = ',')
+train_info = pd.read_csv(init_path + '/data/training_info.csv' , sep = ',')
+train_set = pd.read_csv(init_path + '/data/training_set.csv' , sep = ',')
 
 test_info = pd.read_csv(init_path +'/data/test_info.csv',  sep=',', header=0)
 test_set = pd.read_csv(init_path + '/data/test_set.csv', sep=',', header=0)
 
 ##A BIT OF PRE-PROCESSING
+train_set['mids'] = train_set['mids'].str.split(' ')
+train_info['recipients'] = train_info['recipients'].str.split(' ')
+test_set['mids'] = test_set['mids'].str.split(' ')
 
 #Seperating the different mail id/recipients id
-sender_info = pd.concat([pd.Series(row['sender'], row['mids'].split(' '))              
-                     for _, row in df_set.iterrows()]).reset_index()
-recipient_info = pd.concat([pd.Series(row['mid'], row['recipients'].split(' '))              
-                     for _, row in df_info.iterrows()]).reset_index()#renaming columns
-sender_info.columns = ['mid', 'sender']
-recipient_info.columns = ['recipient', 'mid']
+sender_info_train = pd.concat([pd.Series(row['sender'], row['mids'].split(' '))              
+                     for _, row in train_set.iterrows()]).reset_index()
+recipient_info_train = pd.concat([pd.Series(row['mid'], row['recipients'].split(' '))              
+                     for _, row in train_info.iterrows()]).reset_index()#renaming columns
+sender_info_train.columns = ['mid', 'sender']
+recipient_info_train.columns = ['recipient', 'mid']
 #Changing type mid  into string for the following merge
-recipient_info['mid'] = recipient_info['mid'].astype(str)
+recipient_info_train['mid'] = recipient_info_train['mid'].astype(str)
 #Merging two dataset : final granularity : sender mail - recipient mail - number of mail sent from sendr to recipient
-mid_send_recip  = sender_info.merge(recipient_info, how='inner', left_on='mid', right_on='mid')
-send_recip_count_mail = mid_send_recip.groupby(['sender', 'recipient'], as_index=False).count()
- 
- 
-print('New pandas Dataset created called send_recip_nb_mail')
+mid_send_recip_train  = sender_info_train.merge(recipient_info_train, how='inner', left_on='mid', right_on='mid')
+send_recip_count_mail_train = mid_send_recip_train.groupby(['sender', 'recipient'], as_index=False).count()
 
-# For each document in the dataset, do the preprocessing  
-data_split_word_train = removing_stop_words(df_info)
+
+address_book_train = mid_send_recip_train.groupby(['sender', 'recipient'])['mid'].apply(list).reset_index()
+
+
+# For each document in the dataset, do the preprocessing for removing stop words
+data_split_word_train = removing_stop_words(train_info)
 print('Stop Word removed for training..')
 data_split_word_test = removing_stop_words(test_info)
 print('Stop Word removed for testing..')
