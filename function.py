@@ -138,6 +138,7 @@ class tfidf_centroid():
             if index%1000==0:
                 print (index)
             
+            #Compute tf-idf centroid for each couple (sender, receiver) and fill the dictionnary
             if row[0] in self.dict_centroid.keys():
                 list_idx = df_split_word_train[df_split_word_train['mid'].isin([int(i) for i in row[2]])].index.tolist()
                 self.dict_centroid[row[0]][row[1]]= self.X_train[list_idx].sum(axis=0)
@@ -145,7 +146,13 @@ class tfidf_centroid():
                 self.dict_centroid[row[0]] = {}
                 list_idx = df_split_word_train[df_split_word_train['mid'].isin([int(i) for i in row[2]])].index.tolist()
                 self.dict_centroid[row[0]][row[1]]= self.X_train[list_idx].sum(axis=0)
-                    
+                
+        self.prob_r = mid_send_recip_train.groupby(['recipient'])['mid'].count()/df_split_word_train.shape[0]
+        self.prob_r = self.prob_r.reset_index()
+        self.prob_s_given_r = mid_send_recip_train.groupby(['recipient', 'sender'])['mid'].count().reset_index() 
+        self.prob_s_given_r = self.prob_s_given_r.merge(mid_send_recip_train.groupby(['recipient'])['mid'].count().reset_index(), how='inner', left_on='recipient', right_on='recipient')
+        self.prob_s_given_r['prob_s_r'] =  self.prob_s_given_r['mid_x']/self.prob_s_given_r['mid_y']
+        self.prob_s_given_r = self.prob_s_given_r[['recipient', 'sender', 'prob_s_r']]
         duration = time() - t0
         print("done in %fs" % (duration))
         print()
@@ -166,13 +173,31 @@ class tfidf_centroid():
         for idx in range(X_test.shape[0]):
             sender = df_split_word_test_bis['sender'][idx]
             cosine_list = []
+            prob_list = [] 
+            tot_cosine = 0
             for recip in self.dict_centroid[sender]:
                 cosine = linear_kernel(X_test[idx], self.dict_centroid[sender][recip])
-                cosine_list.append((recip,int(cosine)))
+                tot_cosine += cosine
+                
+                prob_r = self.prob_r.loc[self.prob_r['recip'] == recip]['mid']
+                prob_s_r = self.prob_s_given_r.loc[(self.prob_s_given_r['sender'] == sender) & (self.prob_s_given_r['recipient'] == recip) ]['prob_s_r']
+                
+                cosine_list.append((recip,float(cosine)))
+                prob_list.append((recip, prob_r, prob_s_r))
  
-            #we take the ten biggest cosine similarity for each given mail-sender               
-            cosine_list = sorted(cosine_list, key=lambda cosine: cosine[1], reverse=True)[:number_keep]
-            predict_test.append(' '.join([x[0] for x in cosine_list]))
+            
+            #we take the ten biggest cosine similarity for each given mail-sender
+            maximum = max(cosine_list,key=itemgetter(1))[1] 
+            minimum =min(cosine_list,key=itemgetter(1))[1]  
+            cosine_list = [(cosine[0], (cosine[1]- minimum)/(maximum-minimum)) for cosine in cosine_list]
+            
+            final_prob = []
+            for i in range(len(cosine_list)):
+                final_prob.append(cosine_list[i][0], cosine_list[i][1]*prob_list[i][1]*prob_list[i][2])
+            
+            final_prob = sorted(final_prob, key=lambda prob: prob[1], reverse=True)[:number_keep]
+            
+            predict_test.append(' '.join([x[0] for x in final_prob]))
             
             if idx%100 == 0:
                 print(idx)
