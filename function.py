@@ -54,10 +54,10 @@ def removing_stop_words(df_with_body) :
         if i%1000==0:
             print(i)
         data.append(doc2)   # list data contains the preprocessed documents
-    data1 = pd.DataFrame({'word split': data})
-    data11 = pd.concat([df_with_body, data1], axis=1, join='inner')
-    del data11['body']
-    return data11
+    data_result = pd.DataFrame({'word split': data})
+    data_result = pd.concat([df_with_body, data_result], axis=1, join='inner')
+    del data_result['body']
+    return data_result
 
 
 
@@ -75,11 +75,14 @@ def tfidf(df_split_word_train, df_split_word_test):
 
 
 
-def closest_mail_test(df_test, df_train, X_train, X_test, number_keep, mid_send_recip):
+def closest_mail(df_test, df_train, X_train, X_test, number_keep):
     t0 = time()
+    
+    df_train['recipients'] = df_train['recipients'].str.split(' ')
     
     df_test['close_mids'] = [[]]*df_test.shape[0]
     df_test['close_mids_similarities'] = [[]]*df_test.shape[0]
+    
     
     for idx in range(df_test.shape[0]):
         if idx%50 == 0:
@@ -94,7 +97,7 @@ def closest_mail_test(df_test, df_train, X_train, X_test, number_keep, mid_send_
         close_similarities = similarities[top_sim_idx]
         receivers = {}
         for jdx,el in enumerate(close_mids):
-            new_recs = df_info.loc[df_info['mid'] == el]['recipient']
+            new_recs = df_train.loc[df_train['mid'] == el]['recipients']
             new_recs = new_recs.tolist()[0]
             for key_rec in new_recs:
                 try:
@@ -119,11 +122,14 @@ class tfidf_centroid():
     def __init__(self):
         self.vectorizer = TfidfVectorizer(min_df=1)
 
-    def fit(self, df_split_word_train, address_book_train):
+    def fit(self, df_split_word_train, mid_send_recip_train):
         
         corpus_train = df_split_word_train['word split'].tolist() 
         t0 = time()
         self.X_train = self.vectorizer.fit_transform(corpus_train)
+        
+        #computation of the address book
+        address_book_train = mid_send_recip_train.groupby(['sender', 'recipient'])['mid'].apply(list).reset_index()
         
         self.dict_centroid={}
         
@@ -134,9 +140,7 @@ class tfidf_centroid():
             
             if row[0] in self.dict_centroid.keys():
                 list_idx = df_split_word_train[df_split_word_train['mid'].isin([int(i) for i in row[2]])].index.tolist()
-                
-                if row[1] in self.dict_centroid[row[0]].keys():
-                    self.dict_centroid[row[0]][row[1]]= self.X_train[list_idx].sum(axis=0)
+                self.dict_centroid[row[0]][row[1]]= self.X_train[list_idx].sum(axis=0)
             else:
                 self.dict_centroid[row[0]] = {}
                 list_idx = df_split_word_train[df_split_word_train['mid'].isin([int(i) for i in row[2]])].index.tolist()
@@ -146,9 +150,34 @@ class tfidf_centroid():
         print("done in %fs" % (duration))
         print()
 
-    def predict(self, df_split_word_test, X_test, number_keep):
+    def predict(self, test_set, df_split_word_test, number_keep):
+        sender_info_test = pd.concat([pd.Series(row['sender'], row['mids'].split(' '))              
+                     for _, row in test_set.iterrows()]).reset_index()
+        
+        sender_info_test.columns = ['mid', 'sender']
+        df_split_word_test['mid'] = df_split_word_test['mid'].astype(str)
+        df_split_word_test_bis = df_split_word_test.merge(sender_info_test[['mid', 'sender']], how='inner', left_on='mid', right_on='mid')
+        
         corpus_test = df_split_word_test['word split'].tolist() 
-        X_test = vectorizer.transform(corpus_test)
+        X_test = self.vectorizer.transform(corpus_test)
+        
+        predict_test = []
+        
+        for idx in range(X_test.shape[0]):
+            sender = df_split_word_test_bis['sender'][idx]
+            cosine_list = []
+            for recip in self.dict_centroid[sender]:
+                cosine = linear_kernel(X_test[idx], self.dict_centroid[sender][recip])
+                cosine_list.append((recip,int(cosine)))
+ 
+            #we take the ten biggest cosine similarity for each given mail-sender               
+            cosine_list = sorted(cosine_list, key=lambda cosine: cosine[1], reverse=True)[:number_keep]
+            predict_test.append(' '.join([x[0] for x in cosine_list]))
+            
+            if idx%100 == 0:
+                print(idx)
+            
+        return predict_test
         
         
         
