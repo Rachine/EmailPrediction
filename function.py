@@ -179,21 +179,21 @@ class tfidf_centroid():
                 cosine = linear_kernel(X_test[idx], self.dict_centroid[sender][recip])
                 tot_cosine += cosine
                 
-                prob_r = self.prob_r.loc[self.prob_r['recip'] == recip]['mid']
-                prob_s_r = self.prob_s_given_r.loc[(self.prob_s_given_r['sender'] == sender) & (self.prob_s_given_r['recipient'] == recip) ]['prob_s_r']
+                prob_r_select = float(self.prob_r.loc[self.prob_r['recipient'] == recip]['mid'])
+                prob_s_r = float(self.prob_s_given_r.loc[(self.prob_s_given_r['sender'] == sender) & (self.prob_s_given_r['recipient'] == recip) ]['prob_s_r'])
                 
                 cosine_list.append((recip,float(cosine)))
-                prob_list.append((recip, prob_r, prob_s_r))
+                prob_list.append((recip, prob_r_select, prob_s_r))
  
             
             #we take the ten biggest cosine similarity for each given mail-sender
             maximum = max(cosine_list,key=itemgetter(1))[1] 
             minimum =min(cosine_list,key=itemgetter(1))[1]  
-            cosine_list = [(cosine[0], (cosine[1]- minimum)/(maximum-minimum)) for cosine in cosine_list]
+            cosine_list = [(cosine[0], (cosine[1]- minimum)/(maximum-minimum)) if maximum!=minimum else (cosine[0],1) for cosine in cosine_list]
             
             final_prob = []
             for i in range(len(cosine_list)):
-                final_prob.append(cosine_list[i][0], cosine_list[i][1]*prob_list[i][1]*prob_list[i][2])
+                final_prob.append((cosine_list[i][0], cosine_list[i][1]*prob_list[i][1]*prob_list[i][2]))
             
             final_prob = sorted(final_prob, key=lambda prob: prob[1], reverse=True)[:number_keep]
             
