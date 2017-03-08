@@ -18,6 +18,7 @@ from collections import OrderedDict
 from operator import itemgetter
 import pdb
 from scipy.sparse.linalg import norm
+import scipy
 
 def removing_stop_words(df_with_body) :
     
@@ -211,7 +212,7 @@ class tfidf_centroid():
                 #prob_s_r = mail_s_r/mail_r
                 prob_r_s = self.dict_prob_r_s[recip][sender]
                     
-                cosine_r_s = linear_kernel(X_test[idx], self.dict_centroid[sender][recip])/norm(self.dict_centroid[sender][recip])
+                cosine_r_s = linear_kernel(X_test[idx], self.dict_centroid[sender][recip])/norm(scipy.sparse.csr_matrix(self.dict_centroid[sender][recip]))
 
                 #cosine_r = linear_kernel(X_test[idx], self.dict_centroid_r[recip])
                 #cosine_main = linear_kernel(X_test[idx], self.dict_centroid_main)
