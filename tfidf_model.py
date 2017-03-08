@@ -49,7 +49,7 @@ print('Stop Word removed for testing..')
 
 model = tfidf_centroid()
 model.fit(data_split_word_train, mid_send_recip_train)
-prediction_test = model.predict(test_set, data_split_word_test, 10)
+prediction_test = model.predict(test_set, data_split_word_test, mid_send_recip_train, 10)
 
 df_result = pd.DataFrame(prediction_test, columns=['recipients'])
 result_final = pd.concat([test_info['mid'],df_result], axis=1)
