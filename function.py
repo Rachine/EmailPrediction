@@ -75,7 +75,7 @@ class tfidf_centroid():
         
         #computation of the address boo
         #'becky.spencer@enron.com'
-        self.dict_centroid={}
+        self.dict_centroid = {}
         self.dict_prob_r_s = {}
         
         for index, row in address_book_train_sender.iterrows():
