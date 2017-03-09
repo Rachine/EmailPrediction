@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Mar  6 12:08:51 2017
+Created on Thu Mar  9 10:40:02 2017
 
 @author: paulinenicolas
 """
+
 import numpy as np
 import pandas as pd
 import os
@@ -42,8 +43,7 @@ def removing_stop_words(df_with_body) :
         #    
         # Remove punctuation 
         punctuation = set(string.punctuation)
-        doc = ' '.join(w for w in text.split() if not '@' in w)
-        doc = ' '.join(w for w in doc.lower().split() if not 'http' in w)
+        doc = ' '.join(w for w in text.lower().split() if not 'http' in w)
         doc = ''.join(w for w in doc.lower() if w not in punctuation)
         # Stopword removal
         doc = [w for w in doc.split() if w not in stopwords]
@@ -63,6 +63,80 @@ def removing_stop_words(df_with_body) :
     return data_result
 
 
+
+
+class tfidf_centroid():
+    
+    def __init__(self):
+        self.vectorizer = TfidfVectorizer(min_df=1)
+
+    def fit(self, df_split_word_train, train_set, address_book_train, sender):
+        
+        address_book_train_sender = address_book_train.loc[address_book_train['sender']==sender]
+        list_mid =  train_set.loc[train_set['sender'] == sender]['mids'].str.split().tolist()[0]
+        
+        df_split_word_train_sender = df_split_word_train.loc[df_split_word_train['mid'].isin([int(i) for i in list_mid])].reset_index()
+        corpus_train = df_split_word_train_sender['word split'].tolist()
+        self.X_train = self.vectorizer.fit_transform(corpus_train)
+        
+        #computation of the address boo
+        #'becky.spencer@enron.com'
+        self.dict_centroid={}
+        self.dict_prob_r_s = {}
+        
+        for index, row in address_book_train_sender.iterrows():
+                
+            list_idx = df_split_word_train_sender[df_split_word_train_sender['mid'].isin([int(i) for i in row[2]])].index.tolist()
+                                
+            #filling dictionnary of prob_s_r
+            self.dict_prob_r_s[row[1]] = len(list_idx)/address_book_train.loc[address_book_train['recipient']==row[1]]['mid'].apply(len).sum()
+            
+            #Compute tf-idf centroid for each couple (sender, receiver) and fill the dictionnary
+            self.dict_centroid[row[1]] = self.X_train[list_idx].sum(axis=0)
+
+
+    def predict(self, mid, sender, test_set, df_split_word_test, dict_prob_r, number_keep):
+
+        df_split_word_test['mid'] = df_split_word_test['mid'].astype(str)
+        df_split_word_test_bis = df_split_word_test.loc[df_split_word_test['mid'] == mid]
+        
+        corpus_test = df_split_word_test_bis['word split'].tolist() 
+        X_test = self.vectorizer.transform(corpus_test)
+
+        cosine_list_r_s = []
+        prob_list = [] 
+        
+        i=0
+        for recip in self.dict_centroid:
+
+            prob_r = dict_prob_r[recip]
+            prob_r_s = self.dict_prob_r_s[recip]
+                
+            cosine_r_s = linear_kernel(X_test, self.dict_centroid[recip])/norm(scipy.sparse.csr_matrix(self.dict_centroid[recip]))
+            cosine_list_r_s.append((recip,float(cosine_r_s)))
+
+            prob_list.append((recip, prob_r_s, prob_r))
+            
+            #we take the ten biggest cosine similarity for each given mail-sender
+            maximum_r_s = max(cosine_list_r_s,key=itemgetter(1))[1] 
+            minimum_r_s =min(cosine_list_r_s,key=itemgetter(1))[1] 
+            
+            cosine_list_r_s = [(cosine[0], (cosine[1]- minimum_r_s)/(maximum_r_s - minimum_r_s)) if maximum_r_s!=minimum_r_s else (cosine[0],1) for cosine in cosine_list_r_s]
+            final_prob = []
+            
+            for i in range(len(cosine_list_r_s)):
+                final_prob.append((cosine_list_r_s[i][0], (cosine_list_r_s[i][1])*prob_list[i][1]*prob_list[i][2]))
+            
+            final_prob = sorted(final_prob, key=lambda prob: prob[1], reverse=True)[:number_keep]
+            
+            final_prob = ' '.join([x[0] for x in final_prob])
+
+            
+        return final_prob
+
+
+
+''''
 
 def tfidf(df_split_word_train, df_split_word_test):
     corpus_train = df_split_word_train['word split'].tolist() 
@@ -117,141 +191,6 @@ def closest_mail(df_test, df_train, X_train, X_test, number_keep):
     df_test['recipients'] = 0
     
     return df_test
-
-
-
-class tfidf_centroid():
-    
-    def __init__(self):
-        self.vectorizer = TfidfVectorizer(min_df=1)
-
-    def fit(self, df_split_word_train, mid_send_recip_train):
-        
-        self.num_mail = df_split_word_train.shape[0]
-        corpus_train = df_split_word_train['word split'].tolist() 
-        t0 = time()
-        self.X_train = self.vectorizer.fit_transform(corpus_train)
-        
-        #computation of the address book
-        address_book_train = mid_send_recip_train.groupby(['sender', 'recipient'])['mid'].apply(list).reset_index()
-        
-        self.dict_centroid={}
-        self.dict_prob_r={}
-        self.dict_prob_r_s = {}
-        self.counter = {}
-        
-        for index, row in address_book_train.iterrows():
-                
-            list_idx = df_split_word_train[df_split_word_train['mid'].isin([int(i) for i in row[2]])].index.tolist()                
-            
-            #filling dictionnary of prob_R
-            if  row[1] in self.dict_prob_r.keys():
-                self.dict_prob_r[row[1]] += len(list_idx)/self.num_mail
-            else:
-                self.dict_prob_r[row[1]] = len(list_idx)/self.num_mail
-                                
-            #filling dictionnary of prob_s_r
-            if row[1] in self.dict_prob_r_s.keys():
-                self.dict_prob_r_s[row[1]][row[0]] = len(list_idx)
-                self.counter[row[1]] += len(list_idx)
-            else:
-                self.dict_prob_r_s[row[1]] = {}
-                self.dict_prob_r_s[row[1]][row[0]] = len(list_idx)
-                self.counter[row[1]] = len(list_idx)
-            
-            
-            #Compute tf-idf centroid for each couple (sender, receiver) and fill the dictionnary
-            if row[0] in self.dict_centroid.keys():
-                self.dict_centroid[row[0]][row[1]] = self.X_train[list_idx].sum(axis=0)                
-            else:
-                self.dict_centroid[row[0]] = {}
-                self.dict_centroid[row[0]][row[1]] = self.X_train[list_idx].sum(axis=0)
-                
-            if index%1000==0:
-                print (index)
-        
-        i=0        
-        for recip in self.dict_prob_r_s.keys():
-            for sender in self.dict_prob_r_s[recip].keys():
-                self.dict_prob_r_s[recip][sender] = self.dict_prob_r_s[recip][sender]/self.counter[recip]
-            i+=1
-            if i%1000==0:
-                print (i)
-                
-
-        duration = time() - t0
-        print("done in %fs" % (duration))
-        print()
-
-    def predict(self, test_set, df_split_word_test, mid_send_recip_train,  number_keep):
-        sender_info_test = pd.concat([pd.Series(row['sender'], row['mids'].split(' '))              
-                     for _, row in test_set.iterrows()]).reset_index()
-        
-        sender_info_test.columns = ['mid', 'sender']
-        df_split_word_test['mid'] = df_split_word_test['mid'].astype(str)
-        df_split_word_test_bis = df_split_word_test.merge(sender_info_test[['mid', 'sender']], how='inner', left_on='mid', right_on='mid')
-        
-        corpus_test = df_split_word_test['word split'].tolist() 
-        X_test = self.vectorizer.transform(corpus_test)
-        
-        predict_test = []
-        
-        for idx in range(X_test.shape[0]):
-            sender = df_split_word_test_bis['sender'][idx]
-            cosine_list_r_s = []
-            #cosine_list_r = []
-            #cosine_list_main = []
-            prob_list = [] 
-            for recip in self.dict_centroid[sender]:
-
-                #mail_r = mid_send_recip_train.loc[mid_send_recip_train['recipient'] == recip].groupby(['recipient'])['mid'].count()[0]
-                #prob_r = mail_r/self.num_mail
-                prob_r = self.dict_prob_r[recip]
-                
-                #mail_s_r = mid_send_recip_train.loc[(mid_send_recip_train['recipient'] == recip) & (mid_send_recip_train['sender'] == sender) ].groupby(['recipient', 'sender'])['mid'].count()[0]
-                #prob_s_r = mail_s_r/mail_r
-                prob_r_s = self.dict_prob_r_s[recip][sender]
-                    
-                cosine_r_s = linear_kernel(X_test[idx], self.dict_centroid[sender][recip])/norm(scipy.sparse.csr_matrix(self.dict_centroid[sender][recip]))
-
-                #cosine_r = linear_kernel(X_test[idx], self.dict_centroid_r[recip])
-                #cosine_main = linear_kernel(X_test[idx], self.dict_centroid_main)
-                
-                cosine_list_r_s.append((recip,float(cosine_r_s)))
-                #cosine_list_r.append((recip,float(cosine_r)))
-                #cosine_list_main.append((recip,float(cosine_main)))
-                
-                prob_list.append((recip, prob_r, prob_r_s))
-            
-            #we take the ten biggest cosine similarity for each given mail-sender
-            maximum_r_s = max(cosine_list_r_s,key=itemgetter(1))[1] 
-            minimum_r_s =min(cosine_list_r_s,key=itemgetter(1))[1] 
-            
-            #maximum_r = max(cosine_list_r,key=itemgetter(1))[1] 
-            #minimum_r =min(cosine_list_r,key=itemgetter(1))[1] 
-            
-            #maximum_main = max(cosine_list_main,key=itemgetter(1))[1] 
-            #minimum_main =min(cosine_list_main,key=itemgetter(1))[1] 
-            
-            cosine_list_r_s = [(cosine[0], (cosine[1]- minimum_r_s)/(maximum_r_s - minimum_r_s)) if maximum_r_s!=minimum_r_s else (cosine[0],1) for cosine in cosine_list_r_s]
-            #cosine_list_r = [(cosine[0], (cosine[1]- minimum_r)/(maximum_r - minimum_r)) if maximum_r!=minimum_r else (cosine[0],1) for cosine in cosine_list_r]
-            #cosine_list_main = [(cosine[0], (cosine[1]- minimum_main)/(maximum_main - minimum_main)) if maximum_main!=minimum_main else (cosine[0],1) for cosine in cosine_list_main]
-            
-            final_prob = []
-            for i in range(len(cosine_list_r_s)):
-                final_prob.append((cosine_list_r_s[i][0], (cosine_list_r_s[i][1])*prob_list[i][1]*prob_list[i][2]))
-            
-            final_prob = sorted(final_prob, key=lambda prob: prob[1], reverse=True)[:number_keep]
-            
-            predict_test.append(' '.join([x[0] for x in final_prob]))
-            
-            print(idx)
-            
-        return predict_test
-        
-        
-        
-        
 
 
  

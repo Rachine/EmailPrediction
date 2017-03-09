@@ -25,21 +25,13 @@ test_set = pd.read_csv(init_path + '/data/test_set.csv', sep=',', header=0)
 #Seperating the different mail id/recipients id
 sender_info_train = pd.concat([pd.Series(row['sender'], row['mids'].split(' '))              
                      for _, row in train_set.iterrows()]).reset_index()
-
 recipient_info_train = pd.concat([pd.Series(row['mid'], row['recipients'].split(' '))              
                      for _, row in train_info.iterrows()]).reset_index()#renaming columns
 sender_info_train.columns = ['mid', 'sender']
-
 recipient_info_train.columns = ['recipient', 'mid']
-#Changing type mid  into string for the following merge
 recipient_info_train['mid'] = recipient_info_train['mid'].astype(str)
-#Merging two dataset : final granularity : sender mail - recipient mail - number of mail sent from sendr to recipient
-mid_send_recip_train  = sender_info_train.merge(recipient_info_train, how='inner', left_on='mid', right_on='mid')
-send_recip_count_mail_train = mid_send_recip_train.groupby(['sender', 'recipient'], as_index=False).count()
 
-##A BIT OF PRE-PROCESSING
-#train_set['mids'] = train_set['mids'].str.split(' ')
-#test_set['mids'] = test_set['mids'].str.split(' ')
+mid_send_recip_train  = sender_info_train.merge(recipient_info_train, how='inner', left_on='mid', right_on='mid', )
 
 # For each document in the dataset, do the preprocessing for removing stop words
 data_split_word_train = removing_stop_words(train_info)
@@ -47,9 +39,46 @@ print('Stop Word removed for training..')
 data_split_word_test = removing_stop_words(test_info)
 print('Stop Word removed for testing..')
 
-model = tfidf_centroid()
-model.fit(data_split_word_train, mid_send_recip_train)
-prediction_test = model.predict(test_set, data_split_word_test, mid_send_recip_train, 10)
+#adress book for all sender/recipients
+address_book_train = mid_send_recip_train.groupby(['sender', 'recipient'])['mid'].apply(list).reset_index()
+
+dict_prob_r = {}
+
+for index, row in address_book_train.iterrows():
+    if  row[1] in dict_prob_r.keys():
+        dict_prob_r[row[1]] += len(row[2])/train_info.shape[0]
+    else:
+        dict_prob_r[row[1]] = len(row[2])/train_info.shape[0]
+
+predict_test = []
+
+
+i=0
+for sender in test_set['sender']:
+    
+    print(i)
+    t0 = time()
+    
+    model = tfidf_centroid()
+    model.fit(data_split_word_train, train_set, address_book_train, sender)
+    
+    duration = time() - t0
+    print("training phase done in %fs" % (duration))
+    print()
+    
+    list_mid =  test_set.loc[test_set['sender'] == sender]['mids'].str.split().tolist()[0]
+    
+    t0 = time()
+    for mid in list_mid:
+        prediction = model.predict(mid, sender, test_set, data_split_word_test, dict_prob_r, 10)
+        predict_test.append((mid, prediction))
+   
+    duration = time() - t0
+    print("testing phase done in %fs" % (duration))
+    print()
+    
+    i+=1
+
 
 df_result = pd.DataFrame(prediction_test, columns=['recipients'])
 result_final = pd.concat([test_info['mid'],df_result], axis=1)
