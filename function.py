@@ -118,15 +118,15 @@ class tfidf_centroid():
             cosine_list_r_s = [(cosine[0], (cosine[1]- minimum_r_s)/(maximum_r_s - minimum_r_s)) if maximum_r_s!=minimum_r_s else (cosine[0],1) for cosine in cosine_list_r_s]
             final_prob = []
             
-            for i in range(len(cosine_list_r_s)):
-                final_prob.append((cosine_list_r_s[i][0], (cosine_list_r_s[i][1])*prob_list[i][1]*prob_list[i][2]))
+        for i in range(len(cosine_list_r_s)):
+            final_prob.append((cosine_list_r_s[i][0], (cosine_list_r_s[i][1])*prob_list[i][1]*prob_list[i][2]))
             
-            final_prob = sorted(final_prob, key=lambda prob: prob[1], reverse=True)[:number_keep]
+        final_prob = sorted(final_prob, key=lambda prob: prob[1], reverse=True)[:number_keep]
             
-            final_prob = ' '.join([x[0] for x in final_prob])
+        final_pred = ' '.join([x[0] for x in final_prob])
 
             
-        return final_prob
+        return final_pred
 
 
 
