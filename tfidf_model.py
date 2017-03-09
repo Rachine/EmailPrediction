@@ -80,6 +80,5 @@ for sender in test_set['sender']:
     i+=1
 
 
-df_result = pd.DataFrame(prediction_test, columns=['recipients'])
-result_final = pd.concat([test_info['mid'],df_result], axis=1)
-result_final.to_csv('tf_idf_result.csv', sep=',',index=False)
+df_result = pd.DataFrame(predict_test, columns=['mid', 'recipients'])
+df_result.to_csv('tf_idf_result.csv', sep=',',index=False)
