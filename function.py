@@ -43,8 +43,7 @@ def removing_stop_words(df_with_body) :
         #    
         # Remove punctuation 
         punctuation = set(string.punctuation)
-        doc = ' '.join(w for w in text.lower().split() if not 'http' in w)
-        doc = ''.join(w for w in doc.lower() if w not in punctuation)
+        doc = ''.join(w for w in text.lower() if w not in punctuation)
         # Stopword removal
         doc = [w for w in doc.split() if w not in stopwords]
         doc = [w for w in doc if not (any(c.isdigit() for c in w))]
@@ -68,16 +67,11 @@ def removing_stop_words(df_with_body) :
 class tfidf_centroid():
     
     def __init__(self):
-        self.vectorizer = TfidfVectorizer(min_df=1)
+        pass
 
-    def fit(self, df_split_word_train, train_set, address_book_train, sender):
+    def fit(self, df_split_word_train, train_set, address_book_train, X_train, sender):
         
         address_book_train_sender = address_book_train.loc[address_book_train['sender']==sender]
-        list_mid =  train_set.loc[train_set['sender'] == sender]['mids'].str.split().tolist()[0]
-        
-        df_split_word_train_sender = df_split_word_train.loc[df_split_word_train['mid'].isin([int(i) for i in list_mid])].reset_index()
-        corpus_train = df_split_word_train_sender['word split'].tolist()
-        self.X_train = self.vectorizer.fit_transform(corpus_train)
         
         #computation of the address boo
         #'becky.spencer@enron.com'
@@ -86,22 +80,22 @@ class tfidf_centroid():
         
         for index, row in address_book_train_sender.iterrows():
                 
-            list_idx = df_split_word_train_sender[df_split_word_train_sender['mid'].isin([int(i) for i in row[2]])].index.tolist()
+            list_idx = df_split_word_train[df_split_word_train['mid'].isin([int(i) for i in row[2]])].index.tolist()
                                 
             #filling dictionnary of prob_s_r
             self.dict_prob_r_s[row[1]] = len(list_idx)/address_book_train.loc[address_book_train['recipient']==row[1]]['mid'].apply(len).sum()
             
             #Compute tf-idf centroid for each couple (sender, receiver) and fill the dictionnary
-            self.dict_centroid[row[1]] = self.X_train[list_idx].sum(axis=0)
+            self.dict_centroid[row[1]] = X_train[list_idx].sum(axis=0)
 
 
-    def predict(self, mid, sender, test_set, df_split_word_test, dict_prob_r, number_keep):
+    def predict(self, mid, sender, test_set, df_split_word_test, dict_prob_r, vectorizer, number_keep):
 
         df_split_word_test['mid'] = df_split_word_test['mid'].astype(str)
         df_split_word_test_bis = df_split_word_test.loc[df_split_word_test['mid'] == mid]
         
         corpus_test = df_split_word_test_bis['word split'].tolist() 
-        X_test = self.vectorizer.transform(corpus_test)
+        X_test = vectorizer.transform(corpus_test)
 
         cosine_list_r_s = []
         prob_list = [] 
@@ -136,65 +130,56 @@ class tfidf_centroid():
 
 
 
-''''
-
-def tfidf(df_split_word_train, df_split_word_test):
-    corpus_train = df_split_word_train['word split'].tolist() 
-    corpus_test = df_split_word_test['word split'].tolist() 
-    t0 = time()
-    vectorizer = TfidfVectorizer(min_df=1)
-    X_train = vectorizer.fit_transform(corpus_train)
-    X_test = vectorizer.transform(corpus_test)
-    duration = time() - t0
-    print("done in %fs" % (duration))
-    print()
-    return X_train, X_test
-
-
-
-def closest_mail(df_test, df_train, X_train, X_test, number_keep):
-    t0 = time()
-    
-    df_train['recipients'] = df_train['recipients'].str.split(' ')
-    
-    df_test['close_mids'] = [[]]*df_test.shape[0]
-    df_test['close_mids_similarities'] = [[]]*df_test.shape[0]
-    
-    
-    for idx in range(df_test.shape[0]):
-        if idx%50 == 0:
-            print(idx)
-        x = X_test[idx]
-        similarities = linear_kernel(x,X_train)[0]
-        top_sim_idx = similarities.argsort()[-number_keep:][::-1]
-        #df_test['close_mids'][idx] = df_train['mid'][top_sim_idx].tolist()
-        #df_test['close_mids_similarities'][idx] = similarities[top_sim_idx]
-        
-        close_mids = df_train['mid'][top_sim_idx].tolist()
-        close_similarities = similarities[top_sim_idx]
-        receivers = {}
-        for jdx,el in enumerate(close_mids):
-            new_recs = df_train.loc[df_train['mid'] == el]['recipients']
-            new_recs = new_recs.tolist()[0]
-            for key_rec in new_recs:
-                try:
-                    receivers[key_rec] += close_similarities[jdx]
-                except:
-                    receivers[key_rec] = close_similarities[jdx]
-        d = OrderedDict(sorted(receivers.items(), key=itemgetter(1)))
-        df_test['recipients'][idx] = ' '.join(list(d.keys())[::-1][:10])
-
-        
-    duration = time() - t0
-    print("done in %fs" % (duration))
-    print()
-    df_test['recipients'] = 0
-    
-    return df_test
-
-
- 
-
-
-
-
+#def tfidf(df_split_word_train, df_split_word_test):
+#    corpus_train = df_split_word_train['word split'].tolist() 
+#    corpus_test = df_split_word_test['word split'].tolist() 
+#    t0 = time()
+#    vectorizer = TfidfVectorizer(min_df=1)
+#    X_train = vectorizer.fit_transform(corpus_train)
+#    X_test = vectorizer.transform(corpus_test)
+#    duration = time() - t0
+#    print("done in %fs" % (duration))
+#    print()
+#    return X_train, X_test
+#
+#
+#
+#def closest_mail(df_test, df_train, X_train, X_test, number_keep):
+#    t0 = time()
+#    
+#    df_train['recipients'] = df_train['recipients'].str.split(' ')
+#    
+#    df_test['close_mids'] = [[]]*df_test.shape[0]
+#    df_test['close_mids_similarities'] = [[]]*df_test.shape[0]
+#    
+#    
+#    for idx in range(df_test.shape[0]):
+#        if idx%50 == 0:
+#            print(idx)
+#        x = X_test[idx]
+#        similarities = linear_kernel(x,X_train)[0]
+#        top_sim_idx = similarities.argsort()[-number_keep:][::-1]
+#        #df_test['close_mids'][idx] = df_train['mid'][top_sim_idx].tolist()
+#        #df_test['close_mids_similarities'][idx] = similarities[top_sim_idx]
+#        
+#        close_mids = df_train['mid'][top_sim_idx].tolist()
+#        close_similarities = similarities[top_sim_idx]
+#        receivers = {}
+#        for jdx,el in enumerate(close_mids):
+#            new_recs = df_train.loc[df_train['mid'] == el]['recipients']
+#            new_recs = new_recs.tolist()[0]
+#            for key_rec in new_recs:
+#                try:
+#                    receivers[key_rec] += close_similarities[jdx]
+#                except:
+#                    receivers[key_rec] = close_similarities[jdx]
+#        d = OrderedDict(sorted(receivers.items(), key=itemgetter(1)))
+#        df_test['recipients'][idx] = ' '.join(list(d.keys())[::-1][:10])
+#
+#        
+#    duration = time() - t0
+#    print("done in %fs" % (duration))
+#    print()
+#    df_test['recipients'] = 0
+#    
+#    return df_test

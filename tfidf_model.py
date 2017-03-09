@@ -52,6 +52,11 @@ for index, row in address_book_train.iterrows():
 
 predict_test = []
 
+corpus_train = data_split_word_train['word split'].tolist()
+vectorizer = TfidfVectorizer(min_df=1)
+X_train = vectorizer.fit_transform(corpus_train)
+
+
 
 i=0
 for sender in test_set['sender']:
@@ -60,17 +65,16 @@ for sender in test_set['sender']:
     t0 = time()
     
     model = tfidf_centroid()
-    model.fit(data_split_word_train, train_set, address_book_train, sender)
+    model.fit(data_split_word_train, train_set, address_book_train, X_train,sender)
     
     duration = time() - t0
     print("training phase done in %fs" % (duration))
     print()
     
     list_mid =  test_set.loc[test_set['sender'] == sender]['mids'].str.split().tolist()[0]
-    
     t0 = time()
     for mid in list_mid:
-        prediction = model.predict(mid, sender, test_set, data_split_word_test, dict_prob_r, 10)
+        prediction = model.predict(mid, sender, test_set, data_split_word_test, dict_prob_r, vectorizer,  10)
         predict_test.append((mid, prediction))
    
     duration = time() - t0
