@@ -14,8 +14,7 @@ from function import *
 import datetime 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-
-init_path = '/Users/paulinenicolas/EmailPrediction'
+init_path = os.getcwd()
 path_to_results = init_path + '/results'
 
 print('Loading the 4 intial datasets (train and test)..')
@@ -104,10 +103,10 @@ print('Stop Word removed for testing..')
 
 
 
-i = 0
+idx = 0
 for sender in test_set['sender']:
     
-    print('sender #', i)
+    print('sender #', idx)
     
     list_mid_train = train_set.loc[train_set['sender'] == sender]['mids'].str.split().tolist()[0]
     list_mid_test = test_set.loc[test_set['sender'] == sender]['mids'].str.split().tolist()[0]
@@ -130,12 +129,11 @@ for sender in test_set['sender']:
         prediction_test = model.predict(test_set_sender, test_info_sender, 10, sender)
         
     df_result = pd.DataFrame(prediction_test, columns=['mid', 'recipients'])
-    if i==0:
+    if idx==0:
         result_final = df_result
     else:
         result_final = pd.concat([result_final,df_result])
-        
-    i+=1
+    idx+=1
     
 
     

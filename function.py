@@ -1,15 +1,13 @@
 import numpy as np
 import pandas as pd
-import os
 import nltk
 from nltk.stem.porter import *
 import string
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import linear_kernel, rbf_kernel
+from sklearn.metrics.pairwise import linear_kernel
 from time import time
 from collections import OrderedDict
 from operator import itemgetter
-import pdb
 
 from scipy.sparse.linalg import norm
 import scipy
