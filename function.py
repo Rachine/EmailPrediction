@@ -176,9 +176,9 @@ class tfidf_centroid():
  
             
             #we take the ten biggest cosine similarity for each given mail-sender
-            #maximum = max(cosine_list,key=itemgetter(1))[1] 
-            #minimum =min(cosine_list,key=itemgetter(1))[1]  
-            #cosine_list = [(cosine[0], (cosine[1]- minimum)/(maximum-minimum)) if maximum!=minimum else (cosine[0],1) for cosine in cosine_list]
+            maximum = max(self.cosine_list,key=itemgetter(1))[1] 
+            minimum =min(self.cosine_list,key=itemgetter(1))[1]  
+            self.cosine_list = [(cosine[0], (cosine[1]- minimum)/(maximum-minimum)) if maximum!=minimum else (cosine[0],1) for cosine in self.cosine_list]
             self.final_prob = []
             for i in range(len(self.cosine_list)):
                 self.final_prob.append((self.cosine_list[i][0], self.cosine_list[i][1]*prob_list[i][1]*prob_list[i][2]))

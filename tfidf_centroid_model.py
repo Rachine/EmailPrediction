@@ -139,7 +139,7 @@ for sender in test_set['sender']:
     
 
     
-result_final.to_csv('tf_idf_result_new_6_month_sqrt.csv', sep=',',index=False)
+result_final.to_csv('tf_idf_result_new_6_month_cosine_proba.csv', sep=',',index=False)
     
     
     
